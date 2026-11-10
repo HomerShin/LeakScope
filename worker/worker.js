@@ -11,8 +11,6 @@
 
 export default {
   async fetch(request, env, ctx) {
-    const ALLOWED_PRODUCTS = (env.ALLOWED_PRODUCT_IDS || "prod_30urhTXPFHnMKBU56GiGvy")
-      .split(",").map(s => s.trim());
     const url = new URL(request.url);
     const path = url.pathname;
 
@@ -96,7 +94,9 @@ async function handleCreemWebhook(request, env) {
   const orderId = checkout.order?.id;
 
   // 4. 产品白名单检查
-  if (!ALLOWED_PRODUCTS.includes(productId)) {
+  const allowedProducts = (env.ALLOWED_PRODUCT_IDS || "prod_30urhTXPFHnMKBU56GiGvy")
+    .split(",").map(s => s.trim());
+  if (!allowedProducts.includes(productId)) {
     console.log(`Webhook: product ${productId} not in allowlist, ignoring`);
     return json({ ok: true, skipped: true, reason: "product not allowed" });
   }
