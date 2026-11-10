@@ -33,6 +33,15 @@ export default {
       return handleVerify(request, env);
     }
 
+    // ─── Landing page analytics ─────────────────────────
+    if (path === "/api/track" && request.method === "POST") {
+      return handleTrack(request, env);
+    }
+
+    if (path === "/api/stats" && request.method === "GET") {
+      return handleStats(env, url);
+    }
+
     // ─── Health check ───────────────────────────────────
     if (path === "/healthz") {
       return json({ ok: true, service: "leakscope-license" });
@@ -190,6 +199,46 @@ async function handleVerify(request, env) {
     message: "License verified ✓",
     token,
   });
+}
+
+// ─── Landing Page Analytics ───────────────────────────────
+// 极简事件计数：POST /api/track { event } → 按天累加写入 KV
+// 不用 cookie、不存 IP，只记事件总次数
+const TRACK_EVENTS = ["pageview", "download", "pro_click", "github_click"];
+
+async function handleTrack(request, env) {
+  try {
+    const raw = await request.text();
+    // sendBeacon 默认 text/plain，直接解析 JSON
+    if (raw.length > 512) return json({ ok: false, error: "payload too large" }, 400);
+
+    const body = JSON.parse(raw || "{}");
+    const event = String(body.event || "");
+    if (!TRACK_EVENTS.includes(event)) {
+      return json({ ok: false, error: "unknown event" }, 400);
+    }
+
+    const day = new Date().toISOString().slice(0, 10);
+    const key = `stats:${day}:${event}`;
+    const prev = parseInt((await env.LEAKSCOPE_KEYS.get(key)) || "0", 10) || 0;
+    await env.LEAKSCOPE_KEYS.put(key, String(prev + 1));
+
+    return json({ ok: true });
+  } catch (err) {
+    console.error("Track error:", err);
+    return json({ ok: false }, 400);
+  }
+}
+
+// GET /api/stats?date=YYYY-MM-DD → 当天各事件计数
+async function handleStats(env, url) {
+  const day = url.searchParams.get("date") || new Date().toISOString().slice(0, 10);
+  const out = { date: day };
+  for (const event of TRACK_EVENTS) {
+    const raw = await env.LEAKSCOPE_KEYS.get(`stats:${day}:${event}`);
+    out[event] = parseInt(raw || "0", 10) || 0;
+  }
+  return json(out);
 }
 
 // ─── Helpers ──────────────────────────────────────────────

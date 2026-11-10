@@ -245,5 +245,35 @@
   </div>
 </footer>
 
+<!-- Analytics: 复用 License Worker，无 cookie，仅计数 -->
+<script>
+(function () {
+  var ENDPOINT = "https://leakscope-license.805998855.workers.dev/api/track";
+
+  function track(event) {
+    var payload = JSON.stringify({ event: event });
+    try {
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(ENDPOINT, payload);
+      } else {
+        fetch(ENDPOINT, { method: "POST", body: payload, keepalive: true, mode: "no-cors" });
+      }
+    } catch (e) { /* 埋点失败不影响页面 */ }
+  }
+
+  if (document.readyState === "complete") track("pageview");
+  else window.addEventListener("load", function () { track("pageview"); });
+
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest ? e.target.closest("a") : null;
+    if (!a) return;
+    var href = a.getAttribute("href") || "";
+    if (href.indexOf(".exe") !== -1) track("download");
+    else if (href.indexOf("creem.io") !== -1) track("pro_click");
+    else if (href.indexOf("github.com/HomerShin/LeakScope") !== -1) track("github_click");
+  }, true);
+})();
+</script>
+
 </body>
 </html>
