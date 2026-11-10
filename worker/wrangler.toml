@@ -1,0 +1,16 @@
+name = "leakscope-license"
+main = "worker.js"
+compatibility_date = "2025-01-15"
+compatibility_flags = ["nodejs_compat"]
+
+# KV 绑定 — 存 Creem license keys
+# 先在 Cloudflare Dashboard → Storage & Databases → KV → Create namespace
+# 然后把 namespace ID 填到下面
+kv_namespaces = [
+  { binding = "LEAKSCOPE_KEYS", id = "79053d080114469bb8de036f254fa306" }
+]
+
+# Variables（不是 secrets！）
+# Cloudflare Dashboard → Settings → Variables and Secrets → Production variables
+[vars]
+ALLOWED_PRODUCT_IDS = "prod_30urhTXPFHnMKBU56GiGvy"
